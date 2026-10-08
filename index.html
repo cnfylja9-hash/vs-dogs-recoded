@@ -550,23 +550,33 @@ if(type==='k'){const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.f
 else if(type==='s'){const bs=ac.sampleRate*.08,b=ac.createBuffer(1,bs,ac.sampleRate),da=b.getChannelData(0);for(let i=0;i<bs;i++)da[i]=(Math.random()*2-1)*Math.exp(-i/(bs*.3));const s=ac.createBufferSource();s.buffer=b;const g=ac.createGain();g.gain.value=.08;s.connect(g);g.connect(musicGain);s.start()}
 else if(type==='H'){const bs=ac.sampleRate*.05,b=ac.createBuffer(1,bs,ac.sampleRate),da=b.getChannelData(0);for(let i=0;i<bs;i++)da[i]=(Math.random()*2-1)*Math.exp(-i/(bs*.2));const s=ac.createBufferSource();s.buffer=b;const g=ac.createGain();g.gain.value=.06;s.connect(g);g.connect(musicGain);s.start()}
 }
-function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}musicKey=null;musicTick=0}
+function stopMusic(){
+if(musicTimer){clearInterval(musicTimer);musicTimer=null}
+if(musicTimeout){clearTimeout(musicTimeout);musicTimeout=null}
+musicKey=null;musicTick=0;
+}
+let musicTimeout=null;
 function playTrack(key){
 if(musicKey===key)return;
 stopMusic();musicKey=key;musicTick=0;
 const track=TRACKS[key];if(!track)return;
-const stepDur=60000/track.bpm/2; // 2 шага на долю
+const stepDur=60000/track.bpm/2;
 const totalSteps=track.melody.length;
-musicTimer=setInterval(()=>{
+let nextTime=performance.now();
+const schedule=()=>{
 if(musicKey!==key)return;
-// Мелодия — каждый шаг
+const now=performance.now();
+if(now>=nextTime){
 if(track.melody[musicTick])playNoteFreq(track.melody[musicTick],stepDur/1000*.9,'square',.045);
-// Бас — каждый 2-й шаг
 if(musicTick%2===0&&track.bass[(musicTick/2)|0])playNoteFreq(track.bass[(musicTick/2)|0],stepDur/1000*1.8,'triangle',.06);
-// Барабан
 if(track.drums&&track.drums[musicTick]){let d=track.drums[musicTick];if(d!=='.')playDrum(d)}
 musicTick=(musicTick+1)%totalSteps;
-},stepDur);
+nextTime+=stepDur;
+if(nextTime<now)nextTime=now+stepDur;
+}
+musicTimeout=setTimeout(schedule,4);
+};
+schedule();
 }
 function setMusic(key){if(key==='off'){stopMusic();musicKey='off';return}playTrack(key)}
 function startMenuMusic(){if(!gameActive)playTrack('menu')}
